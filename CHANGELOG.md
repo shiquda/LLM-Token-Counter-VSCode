@@ -2,6 +2,16 @@
 
 All notable changes to the "gpt-token-counter" extension will be documented in this file.
 
+## [1.5.0]
+
+### Added
+- New setting `enabledFilePatterns` to show status bar only for files matching specific glob patterns (e.g., `["*.md", "*.mdc"]`).
+
+## [1.4.0]
+
+### Added
+- Token highlighting feature with configurable colors.
+
 ## [1.3.0]
 
 ### Added

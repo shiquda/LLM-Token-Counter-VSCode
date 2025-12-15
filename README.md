@@ -1,8 +1,8 @@
 <div align="center">
     <h1>Live LLM Token Counter</h1>
     <img src="images/icon.png" alt="Logo" width="300" height="300"><br>
-    <a href="https://marketplace.visualstudio.com/items?itemName=bedirt.gpt-token-counter-live"><img src="https://img.shields.io/badge/VSCode-v1.4.0-blue?style=flat&logo=visualstudiocode" alt="VSCode Version"></a>
-    <a href="https://open-vsx.org/extension/bedirt/gpt-token-counter-live"><img alt="OpenVSX Version" src="https://img.shields.io/badge/OpenVSX%20-%20v1.4.0%20-%20%23bb3ec2?style=flat"></a>
+    <a href="https://marketplace.visualstudio.com/items?itemName=bedirt.gpt-token-counter-live"><img src="https://img.shields.io/badge/VSCode-v1.5.0-blue?style=flat&logo=visualstudiocode" alt="VSCode Version"></a>
+    <a href="https://open-vsx.org/extension/bedirt/gpt-token-counter-live"><img alt="OpenVSX Version" src="https://img.shields.io/badge/OpenVSX%20-%20v1.5.0%20-%20%23bb3ec2?style=flat"></a>
     <br><br>
 </div>
 
@@ -100,6 +100,10 @@ This extension contributes the following settings:
   - Default: `Token Count: {count} ({family})`
   - Supported placeholders: `{count}`, `{family}`, `{model}` (alias for family), `{provider}`
 
+- **`gpt-token-counter-live.enabledFilePatterns`**: Glob patterns for files where the status bar should be shown.
+  - Default: `[]` (empty array shows for all files)
+  - Example: `["*.md", "*.mdc"]` shows only for markdown files
+
 ### Highlighting Configuration
 Token highlight colors are stored in your VS Code global state (synced across devices if you have Settings Sync enabled). To customize them select `Configure Token Highlight Colors` option from the Command Palette.
 
@@ -110,6 +114,10 @@ Token highlight colors are stored in your VS Code global state (synced across de
 There are currently no known issues. If you encounter a problem, please report it on the [issue tracker](https://github.com/BedirT/LLM-Token-Counter-VSCode/issues).
 
 ## Release Notes
+
+### 1.5.0 - File Pattern Filtering
+
+- **New setting `enabledFilePatterns`**: Show status bar only for files matching specific glob patterns (e.g., `["*.md", "*.mdc"]`). Empty array shows for all files.
 
 ### 1.4.0 - Token Highlighting & Customization
 
