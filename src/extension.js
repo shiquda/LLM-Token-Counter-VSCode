@@ -2,6 +2,7 @@ const vscode = require('vscode');
 const { encoding_for_model, get_encoding } = require('tiktoken');
 const { countTokens, getTokenizer } = require('@anthropic-ai/tokenizer');
 const { TextDecoder } = require('util');
+const { minimatch } = require('minimatch');
 
 const utf8Decoder = new TextDecoder('utf-8');
 
@@ -129,6 +130,7 @@ let highlightColors = {
 };
 
 let statusBarTemplate = DEFAULT_STATUS_TEMPLATE;
+let enabledFilePatterns = [];
 
 function loadHighlightColors(context) {
     let evenStored = context.globalState.get(HIGHLIGHT_EVEN_KEY);
@@ -164,6 +166,34 @@ function loadHighlightColors(context) {
 function loadStatusBarConfig() {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
     statusBarTemplate = sanitizeTemplateSetting(config.get('statusBarDisplayTemplate'), DEFAULT_STATUS_TEMPLATE);
+}
+
+function loadEnabledFilePatterns() {
+    const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
+    const patterns = config.get('enabledFilePatterns');
+    enabledFilePatterns = Array.isArray(patterns)
+        ? patterns.filter(p => typeof p === 'string' && p.trim()).map(p => p.trim())
+        : [];
+}
+
+function matchesEnabledFilePatterns(editor) {
+    if (!editor || !editor.document) {
+        return false;
+    }
+    // Empty patterns array means show for all files
+    if (enabledFilePatterns.length === 0) {
+        return true;
+    }
+    const filePath = editor.document.uri.fsPath;
+    const fileName = filePath.split(/[\\/]/).pop() || '';
+    // Normalize path by removing leading separators for glob pattern matching
+    // This ensures patterns like "**/docs/*.md" work correctly with absolute paths
+    const normalizedPath = filePath.replace(/^[\\/]+/, '');
+    // Match against both full path and filename for flexibility
+    return enabledFilePatterns.some(pattern => {
+        const opts = { dot: true, nocase: process.platform === 'win32' };
+        return minimatch(fileName, pattern, opts) || minimatch(normalizedPath, pattern, opts);
+    });
 }
 
 function isHighlightableEditor(editor) {
@@ -235,6 +265,7 @@ function activate(context) {
 
     loadHighlightColors(context);
     loadStatusBarConfig();
+    loadEnabledFilePatterns();
 
     const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
     statusBar.command = 'gpt-token-counter-live.changeModel';
@@ -364,7 +395,7 @@ function activate(context) {
 
     function updateHighlightStatusBar() {
         const activeEditor = vscode.window.activeTextEditor;
-        if (!activeEditor || !isHighlightableEditor(activeEditor)) {
+        if (!activeEditor || !isHighlightableEditor(activeEditor) || !matchesEnabledFilePatterns(activeEditor)) {
             highlightStatusBar.hide();
             return;
         }
@@ -532,6 +563,13 @@ function activate(context) {
             return;
         }
 
+        if (!matchesEnabledFilePatterns(editor)) {
+            statusBar.hide();
+            clearTokenHighlights(editor);
+            highlightStatusBar.hide();
+            return;
+        }
+
         const document = editor.document;
         const selection = editor.selection;
         const text = selection.isEmpty ? document.getText() : document.getText(selection);
@@ -583,6 +621,11 @@ function activate(context) {
 
                 updateTokenCount();
             }
+        }
+
+        if (event.affectsConfiguration(`${CONFIG_SECTION}.enabledFilePatterns`)) {
+            loadEnabledFilePatterns();
+            updateTokenCount();
         }
     }, null, context.subscriptions);
 
@@ -987,5 +1030,15 @@ function deactivate() {
 
 module.exports = {
     activate,
-    deactivate
+    deactivate,
+    // Exported for testing
+    _test: {
+        loadEnabledFilePatterns,
+        matchesEnabledFilePatterns,
+        setEnabledFilePatterns: (patterns) => {
+            enabledFilePatterns = Array.isArray(patterns)
+                ? patterns.filter(p => typeof p === 'string' && p.trim()).map(p => p.trim())
+                : [];
+        }
+    }
 }
