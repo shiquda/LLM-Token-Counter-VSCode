@@ -109,6 +109,14 @@ suite('File Pattern Matching', () => {
 		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('/path/to/file.js')), false);
 	});
 
+	test('Should match Windows-style paths with forward-slash globs', () => {
+		setEnabledFilePatterns(['**/docs/*.md']);
+
+		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('C:\\project\\docs\\readme.md')), true);
+		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('C:\\project\\src\\main.js')), false);
+		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('D:\\nested\\docs\\guide.md')), true);
+	});
+
 	// Cleanup after tests
 	suiteTeardown(() => {
 		setEnabledFilePatterns([]);

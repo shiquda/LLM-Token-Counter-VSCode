@@ -168,12 +168,15 @@ function loadStatusBarConfig() {
     statusBarTemplate = sanitizeTemplateSetting(config.get('statusBarDisplayTemplate'), DEFAULT_STATUS_TEMPLATE);
 }
 
-function loadEnabledFilePatterns() {
-    const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
-    const patterns = config.get('enabledFilePatterns');
-    enabledFilePatterns = Array.isArray(patterns)
+function normalizeEnabledFilePatterns(patterns) {
+    return Array.isArray(patterns)
         ? patterns.filter(p => typeof p === 'string' && p.trim()).map(p => p.trim())
         : [];
+}
+
+function loadEnabledFilePatterns() {
+    const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
+    enabledFilePatterns = normalizeEnabledFilePatterns(config.get('enabledFilePatterns'));
 }
 
 function matchesEnabledFilePatterns(editor) {
@@ -185,10 +188,11 @@ function matchesEnabledFilePatterns(editor) {
         return true;
     }
     const filePath = editor.document.uri.fsPath;
-    const fileName = filePath.split(/[\\/]/).pop() || '';
-    // Normalize path by removing leading separators for glob pattern matching
-    // This ensures patterns like "**/docs/*.md" work correctly with absolute paths
-    const normalizedPath = filePath.replace(/^[\\/]+/, '');
+    // Normalize to forward slashes, strip Windows drive letter (e.g. "C:"), then
+    // strip any leading separator so minimatch glob patterns work cross-platform
+    const unixPath = filePath.replace(/\\/g, '/');
+    const fileName = unixPath.split('/').pop() || '';
+    const normalizedPath = unixPath.replace(/^[A-Za-z]:/, '').replace(/^\/+/, '');
     // Match against both full path and filename for flexibility
     return enabledFilePatterns.some(pattern => {
         const opts = { dot: true, nocase: process.platform === 'win32' };
@@ -1036,9 +1040,7 @@ module.exports = {
         loadEnabledFilePatterns,
         matchesEnabledFilePatterns,
         setEnabledFilePatterns: (patterns) => {
-            enabledFilePatterns = Array.isArray(patterns)
-                ? patterns.filter(p => typeof p === 'string' && p.trim()).map(p => p.trim())
-                : [];
+            enabledFilePatterns = normalizeEnabledFilePatterns(patterns);
         }
     }
 }
