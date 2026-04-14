@@ -444,6 +444,13 @@ function activate(context) {
         const sourceBytes = Buffer.from(renderedText, 'utf8');
         const boundaries = buildUtf8BoundaryMap(renderedText);
         const normalizationOffsetMap = tokenizationResult.normalizationOffsetMap || null;
+
+        if (tokenizationResult.normalizationChanged && !normalizationOffsetMap) {
+            clearTokenHighlights(editor);
+            console.warn('[gpt-token-counter-live] Token highlighting skipped because normalization offsets could not be mapped to the original document.');
+            return;
+        }
+
         let byteCursor = 0;
         let hasMismatch = false;
 

@@ -63,4 +63,8 @@ suite('Extension Test Suite', () => {
 		assert.strictEqual(extension.__internal.resolveOriginalOffsetFromNormalized(map, 1, 'forward'), 1);
 		assert.strictEqual(extension.__internal.resolveOriginalOffsetFromNormalized(map, 2, 'forward'), 2);
 	});
+
+	test('normalization offset map returns null when NFKC merges across grapheme boundaries', () => {
+		assert.strictEqual(extension.__internal.buildNormalizationOffsetMap('\uFFB5\uFFCC'), null);
+	});
 });
