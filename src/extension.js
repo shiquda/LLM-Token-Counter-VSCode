@@ -179,25 +179,27 @@ function loadEnabledFilePatterns() {
     enabledFilePatterns = normalizeEnabledFilePatterns(config.get('enabledFilePatterns'));
 }
 
+function matchesFilePatterns(relativePath, patterns) {
+    if (!Array.isArray(patterns) || patterns.length === 0) {
+        return true;
+    }
+    if (typeof relativePath !== 'string') {
+        return false;
+    }
+    const unixPath = relativePath.replace(/\\/g, '/');
+    const fileName = unixPath.split('/').pop() || '';
+    return patterns.some(pattern => {
+        const opts = { dot: true, nocase: process.platform === 'win32' };
+        return minimatch(fileName, pattern, opts) || minimatch(unixPath, pattern, opts);
+    });
+}
+
 function matchesEnabledFilePatterns(editor) {
     if (!editor || !editor.document) {
         return false;
     }
-    // Empty patterns array means show for all files
-    if (enabledFilePatterns.length === 0) {
-        return true;
-    }
-    const filePath = editor.document.uri.fsPath;
-    // Normalize to forward slashes, strip Windows drive letter (e.g. "C:"), then
-    // strip any leading separator so minimatch glob patterns work cross-platform
-    const unixPath = filePath.replace(/\\/g, '/');
-    const fileName = unixPath.split('/').pop() || '';
-    const normalizedPath = unixPath.replace(/^[A-Za-z]:/, '').replace(/^\/+/, '');
-    // Match against both full path and filename for flexibility
-    return enabledFilePatterns.some(pattern => {
-        const opts = { dot: true, nocase: process.platform === 'win32' };
-        return minimatch(fileName, pattern, opts) || minimatch(normalizedPath, pattern, opts);
-    });
+    const relativePath = vscode.workspace.asRelativePath(editor.document.uri, false);
+    return matchesFilePatterns(relativePath, enabledFilePatterns);
 }
 
 function isHighlightableEditor(editor) {
@@ -1035,10 +1037,11 @@ function deactivate() {
 module.exports = {
     activate,
     deactivate,
-    // Exported for testing
     _test: {
         loadEnabledFilePatterns,
         matchesEnabledFilePatterns,
+        matchesFilePatterns,
+        normalizeEnabledFilePatterns,
         setEnabledFilePatterns: (patterns) => {
             enabledFilePatterns = normalizeEnabledFilePatterns(patterns);
         }

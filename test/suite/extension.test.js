@@ -13,111 +13,81 @@ suite('Extension Test Suite', () => {
 });
 
 suite('File Pattern Matching', () => {
-	const { setEnabledFilePatterns, matchesEnabledFilePatterns } = extension._test;
+	const {
+		matchesFilePatterns,
+		matchesEnabledFilePatterns,
+		normalizeEnabledFilePatterns,
+		setEnabledFilePatterns
+	} = extension._test;
 
-	/**
-	 * Create a mock editor object for testing
-	 * @param {string} filePath - The file path to use
-	 * @returns {object} Mock editor object
-	 */
-	function createMockEditor(filePath) {
-		return {
-			document: {
-				uri: {
-					fsPath: filePath
-				}
-			}
-		};
-	}
-
-	test('Empty patterns array should match all files', () => {
-		setEnabledFilePatterns([]);
-
-		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('/path/to/file.js')), true);
-		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('/path/to/file.md')), true);
-		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('/path/to/file.mdc')), true);
-		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('/path/to/file.txt')), true);
+	test('Empty patterns matches any path', () => {
+		assert.strictEqual(matchesFilePatterns('docs/file.md', []), true);
+		assert.strictEqual(matchesFilePatterns('src/main.js', []), true);
+		assert.strictEqual(matchesFilePatterns('', []), true);
 	});
 
-	test('Should match *.md pattern', () => {
+	test('Filename-only globs match by basename', () => {
+		assert.strictEqual(matchesFilePatterns('README.md', ['*.md']), true);
+		assert.strictEqual(matchesFilePatterns('docs/file.md', ['*.md']), true);
+		assert.strictEqual(matchesFilePatterns('deeply/nested/path/file.md', ['*.md']), true);
+		assert.strictEqual(matchesFilePatterns('src/main.js', ['*.md']), false);
+		assert.strictEqual(matchesFilePatterns('docs/file.mdc', ['*.md']), false);
+	});
+
+	test('Multiple patterns match with OR semantics', () => {
+		const patterns = ['*.md', '*.mdc'];
+		assert.strictEqual(matchesFilePatterns('README.md', patterns), true);
+		assert.strictEqual(matchesFilePatterns('rules.mdc', patterns), true);
+		assert.strictEqual(matchesFilePatterns('main.js', patterns), false);
+	});
+
+	test('Workspace-relative directory patterns', () => {
+		// Users writing `docs/*.md` expect it to match files directly in the workspace's docs/ folder.
+		assert.strictEqual(matchesFilePatterns('docs/file.md', ['docs/*.md']), true);
+		assert.strictEqual(matchesFilePatterns('nested/docs/file.md', ['docs/*.md']), false);
+		// Explicit `**` still works for any-depth matching.
+		assert.strictEqual(matchesFilePatterns('nested/docs/file.md', ['**/docs/*.md']), true);
+		assert.strictEqual(matchesFilePatterns('docs/file.md', ['**/docs/*.md']), true);
+	});
+
+	test('Dotfiles match via dot:true option', () => {
+		assert.strictEqual(matchesFilePatterns('.hidden.md', ['*.md']), true);
+		assert.strictEqual(matchesFilePatterns('.config/settings.md', ['**/*.md']), true);
+	});
+
+	test('Windows backslash separators are normalized', () => {
+		assert.strictEqual(matchesFilePatterns('docs\\file.md', ['docs/*.md']), true);
+		assert.strictEqual(matchesFilePatterns('project\\docs\\readme.md', ['**/docs/*.md']), true);
+		assert.strictEqual(matchesFilePatterns('project\\src\\main.js', ['**/docs/*.md']), false);
+	});
+
+	test('Non-string path returns false when patterns are non-empty', () => {
+		assert.strictEqual(matchesFilePatterns(null, ['*.md']), false);
+		assert.strictEqual(matchesFilePatterns(undefined, ['*.md']), false);
+		assert.strictEqual(matchesFilePatterns(42, ['*.md']), false);
+	});
+
+	test('matchesEnabledFilePatterns guards null/undefined editors', () => {
 		setEnabledFilePatterns(['*.md']);
-
-		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('/path/to/file.md')), true);
-		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('/path/to/README.md')), true);
-		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('/path/to/file.js')), false);
-		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('/path/to/file.mdc')), false);
-	});
-
-	test('Should match *.mdc pattern', () => {
-		setEnabledFilePatterns(['*.mdc']);
-
-		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('/path/to/file.mdc')), true);
-		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('/path/to/rules.mdc')), true);
-		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('/path/to/file.md')), false);
-		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('/path/to/file.js')), false);
-	});
-
-	test('Should match multiple patterns (*.md, *.mdc)', () => {
-		setEnabledFilePatterns(['*.md', '*.mdc']);
-
-		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('/path/to/file.md')), true);
-		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('/path/to/file.mdc')), true);
-		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('/path/to/README.md')), true);
-		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('/path/to/rules.mdc')), true);
-		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('/path/to/file.js')), false);
-		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('/path/to/file.txt')), false);
-	});
-
-	test('Should handle dotfiles when pattern includes dot', () => {
-		setEnabledFilePatterns(['*.md']);
-
-		// Files starting with dot should still match if extension matches
-		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('/path/to/.hidden.md')), true);
-	});
-
-	test('Should return false for null/undefined editor', () => {
-		setEnabledFilePatterns(['*.md']);
-
 		assert.strictEqual(matchesEnabledFilePatterns(null), false);
 		assert.strictEqual(matchesEnabledFilePatterns(undefined), false);
 		assert.strictEqual(matchesEnabledFilePatterns({}), false);
 		assert.strictEqual(matchesEnabledFilePatterns({ document: null }), false);
 	});
 
-	test('Should match patterns with path separators', () => {
-		setEnabledFilePatterns(['**/*.md']);
-
-		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('/path/to/file.md')), true);
-		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('/deeply/nested/path/file.md')), true);
+	test('normalizeEnabledFilePatterns trims and drops non-strings', () => {
+		assert.deepStrictEqual(
+			normalizeEnabledFilePatterns([' *.md ', '  *.mdc  ']),
+			['*.md', '*.mdc']
+		);
+		assert.deepStrictEqual(
+			normalizeEnabledFilePatterns(['*.md', '', '   ', null, 42, '*.js']),
+			['*.md', '*.js']
+		);
+		assert.deepStrictEqual(normalizeEnabledFilePatterns(null), []);
+		assert.deepStrictEqual(normalizeEnabledFilePatterns('not-an-array'), []);
 	});
 
-	test('Should match specific directory patterns', () => {
-		setEnabledFilePatterns(['**/docs/*.md']);
-
-		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('/project/docs/readme.md')), true);
-		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('/docs/guide.md')), true);
-	});
-
-	test('Should trim whitespace from patterns', () => {
-		// This test verifies that patterns with leading/trailing whitespace are trimmed
-		// If patterns aren't trimmed, " *.md " would fail to match "file.md"
-		setEnabledFilePatterns([' *.md ', '  *.mdc  ']);
-
-		// These should match because patterns should be trimmed to "*.md" and "*.mdc"
-		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('/path/to/file.md')), true);
-		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('/path/to/file.mdc')), true);
-		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('/path/to/file.js')), false);
-	});
-
-	test('Should match Windows-style paths with forward-slash globs', () => {
-		setEnabledFilePatterns(['**/docs/*.md']);
-
-		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('C:\\project\\docs\\readme.md')), true);
-		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('C:\\project\\src\\main.js')), false);
-		assert.strictEqual(matchesEnabledFilePatterns(createMockEditor('D:\\nested\\docs\\guide.md')), true);
-	});
-
-	// Cleanup after tests
 	suiteTeardown(() => {
 		setEnabledFilePatterns([]);
 	});
