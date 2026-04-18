@@ -56,6 +56,7 @@
   },
   "dependencies": {
     "@anthropic-ai/tokenizer": "^0.0.4",
+    "minimatch": "^9.0.0",
     "tiktoken": "^1.0.22"
   },
   "contributes": {
@@ -94,6 +95,14 @@
           "type": "string",
           "default": "Token Count: {count} ({family})",
           "markdownDescription": "Template used for the status bar text. Supported placeholders: `{count}`, `{family}`, `{provider}` (alias `{model}` for family)."
+        },
+        "gpt-token-counter-live.enabledFilePatterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Glob patterns for files where the status bar should be shown (e.g., `[\"*.md\", \"*.mdc\"]`). Empty array shows for all files."
         }
       }
     }

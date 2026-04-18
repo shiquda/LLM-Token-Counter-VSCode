@@ -100,6 +100,10 @@ This extension contributes the following settings:
   - Default: `Token Count: {count} ({family})`
   - Supported placeholders: `{count}`, `{family}`, `{model}` (alias for family), `{provider}`
 
+- **`gpt-token-counter-live.enabledFilePatterns`**: Glob patterns for files where the status bar should be shown.
+  - Default: `[]` (empty array shows for all files)
+  - Example: `["*.md", "*.mdc"]` shows only for markdown files
+
 ### Highlighting Configuration
 Token highlight colors are stored in your VS Code global state (synced across devices if you have Settings Sync enabled). To customize them select `Configure Token Highlight Colors` option from the Command Palette.
 
@@ -110,6 +114,10 @@ Token highlight colors are stored in your VS Code global state (synced across de
 There are currently no known issues. If you encounter a problem, please report it on the [issue tracker](https://github.com/BedirT/LLM-Token-Counter-VSCode/issues).
 
 ## Release Notes
+
+### 1.5.0 - File Pattern Filtering
+
+- **New setting `enabledFilePatterns`**: Show status bar only for files matching specific glob patterns (e.g., `["*.md", "*.mdc"]`). Empty array shows for all files.
 
 ### 1.4.0 - Token Highlighting & Customization
 
