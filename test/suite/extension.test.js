@@ -67,4 +67,17 @@ suite('Extension Test Suite', () => {
 	test('normalization offset map returns null when NFKC merges across grapheme boundaries', () => {
 		assert.strictEqual(extension.__internal.buildNormalizationOffsetMap('\uFFB5\uFFCC'), null);
 	});
+
+	test('iterateGraphemeSegments requires Intl.Segmenter support', () => {
+		const originalSegmenter = Intl.Segmenter;
+		try {
+			Intl.Segmenter = undefined;
+			assert.throws(
+				() => extension.__internal.buildNormalizationOffsetMap('test'),
+				/Intl\.Segmenter is required/
+			);
+		} finally {
+			Intl.Segmenter = originalSegmenter;
+		}
+	});
 });

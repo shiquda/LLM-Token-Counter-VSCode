@@ -164,23 +164,15 @@ function resolveUtf16Offset(boundaries, byteOffset, maxByteOffset, direction) {
 }
 
 function iterateGraphemeSegments(text) {
-    if (typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function') {
-        const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
-        return Array.from(segmenter.segment(text), ({ segment, index }) => ({
-            segment,
-            index
-        }));
+    if (typeof Intl === 'undefined' || typeof Intl.Segmenter !== 'function') {
+        throw new Error('Intl.Segmenter is required for token normalization mapping.');
     }
 
-    const segments = [];
-    let index = 0;
-    while (index < text.length) {
-        const codePoint = text.codePointAt(index);
-        const segment = String.fromCodePoint(codePoint);
-        segments.push({ segment, index });
-        index += segment.length;
-    }
-    return segments;
+    const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+    return Array.from(segmenter.segment(text), ({ segment, index }) => ({
+        segment,
+        index
+    }));
 }
 
 function buildNormalizationOffsetMap(text) {
@@ -218,6 +210,7 @@ function buildNormalizationOffsetMap(text) {
         normalizedOffset = end;
     }
 
+    // Whole-text NFKC can merge across grapheme boundaries, so reject per-segment maps that do not reassemble exactly.
     const rebuiltNormalizedText = normalizedChunks.join('');
     if (rebuiltNormalizedText !== normalizedText) {
         return null;
@@ -522,12 +515,14 @@ function activate(context) {
             hasMismatch = true;
         }
 
+        if (hasMismatch) {
+            clearTokenHighlights(editor);
+            console.warn('[gpt-token-counter-live] Partial token highlight render due to unsupported UTF-8 token boundaries.');
+            return;
+        }
+
         editor.setDecorations(tokenDecorations.even, evenRanges);
         editor.setDecorations(tokenDecorations.odd, oddRanges);
-
-        if (hasMismatch) {
-            console.warn('[gpt-token-counter-live] Partial token highlight render due to unsupported UTF-8 token boundaries.');
-        }
     }
 
     function updateHighlightStatusBar() {
